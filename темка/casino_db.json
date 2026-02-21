@@ -1,0 +1,51 @@
+{
+  "users": {
+    "7681037970": {
+      "id": 7681037970,
+      "balance": 0.61,
+      "total_deposited": 0.0,
+      "total_withdrawn": 0.0,
+      "total_wagered": 0.4,
+      "total_won": 0.51,
+      "games_played": 4,
+      "wins": 2,
+      "losses": 2,
+      "biggest_win": 0.4,
+      "biggest_loss": 0.1,
+      "username": "mxdarks",
+      "first_name": "ѡх҄ðѧрѣꙋ",
+      "registered_at": "2026-02-21 13:10:59",
+      "last_active": "2026-02-21 13:11:44",
+      "promo_used": []
+    },
+    "7747704018": {
+      "id": 7747704018,
+      "balance": 0.0,
+      "total_deposited": 0.0,
+      "total_withdrawn": 0.0,
+      "total_wagered": 0.5,
+      "total_won": 0.0,
+      "games_played": 1,
+      "wins": 0,
+      "losses": 1,
+      "biggest_win": 0.0,
+      "biggest_loss": 0.5,
+      "username": "qerwa",
+      "first_name": "qerwa",
+      "registered_at": "2026-02-21 13:12:51",
+      "last_active": "2026-02-21 13:13:40",
+      "promo_used": []
+    }
+  },
+  "promo_codes": {},
+  "invoices": {
+    "4f3971ed-6dde-4155-913b-9ae055acdfb8": {
+      "user_id": 7747704018,
+      "amount": 1.0,
+      "cb_id": 44974087,
+      "status": "pending",
+      "created_at": "2026-02-21 13:17:10"
+    }
+  },
+  "withdraw_requests": []
+}
