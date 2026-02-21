@@ -1,4 +1,4 @@
-# bot.py — ЗАПУСК БОТА
+# bot.py
 
 import logging
 import asyncio
@@ -10,6 +10,7 @@ from config import BOT_TOKEN
 from handlers import cmd_start, cmd_admin, on_button, on_message
 from database import load_db, save_db, get_user, upd, fmt
 from payments import cryptobot_get_invoice
+from referral import pay_ref_bonus
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -23,7 +24,8 @@ async def check_pending_invoices(app: Application):
         await asyncio.sleep(30)
         try:
             db      = load_db()
-            pending = {k: v for k, v in db.get("invoices", {}).items() if v.get("status") == "pending"}
+            pending = {k: v for k, v in db.get("invoices", {}).items()
+                       if v.get("status") == "pending"}
             for key, inv in pending.items():
                 cb_inv = await cryptobot_get_invoice(inv["cb_id"])
                 if cb_inv and cb_inv.get("status") == "paid":
@@ -37,6 +39,8 @@ async def check_pending_invoices(app: Application):
                         "balance":         round(u["balance"] + amount, 8),
                         "total_deposited": round(u["total_deposited"] + amount, 8),
                     })
+                    # Реферальный бонус
+                    await pay_ref_bonus(app, user_id, amount)
                     db3 = load_db()
                     u3  = get_user(db3, user_id)
                     try:
@@ -71,7 +75,7 @@ async def main():
         await app.start()
         asyncio.create_task(check_pending_invoices(app))
         await app.updater.start_polling(drop_pending_updates=True)
-        await asyncio.Event().wait()  # держим бота запущенным
+        await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
