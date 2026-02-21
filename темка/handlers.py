@@ -29,6 +29,7 @@ def kb_main():
          InlineKeyboardButton("💸  Вывести",     callback_data="withdraw")],
         [InlineKeyboardButton("🎁  Промокод",    callback_data="promo"),
          InlineKeyboardButton("🏆  Топ игроков", callback_data="top")],
+        [InlineKeyboardButton("👥  Рефералы",    callback_data="referral")],
     ])
 
 def kb_games():
@@ -158,6 +159,45 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     u    = get_user(db, user.id)
     upd(db, user.id, {"username": user.username or "", "first_name": user.first_name or ""})
+
+
+
+
+
+async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if not await check_sub(update, ctx): return
+    db   = load_db()
+    user = update.effective_user
+    u    = get_user(db, user.id)
+    upd(db, user.id, {"username": user.username or "", "first_name": user.first_name or ""})
+
+    # Реферальная ссылка
+    args = ctx.args
+    if args and args[0].startswith("ref_"):
+        code = args[0][4:]
+        from referral import apply_ref, REFERRAL_REG_BONUS
+        if apply_ref(user.id, code):
+            await update.message.reply_text(
+                f"🎁 Вы пришли по реферальной ссылке!\n"
+                f"Добро пожаловать! 🎰",
+                parse_mode="Markdown"
+            )
+
+    db2 = load_db(); u2 = get_user(db2, user.id)
+    await update.message.reply_text(
+        f"🎰 *CASINO BOT*\n\n"
+        f"Привет, *{user.first_name}*! 👋\n\n"
+        f"💵 Ваш баланс: *{fmt(u2['balance'])} USDT*\n\n"
+        f"Выберите действие:",
+        reply_markup=kb_main(), parse_mode="Markdown"
+    )
+
+
+
+
+
+    
+    
     await update.message.reply_text(
         f"🎰 *CASINO BOT*\n\n"
         f"Привет, *{user.first_name}*! 👋\n\n"
@@ -900,10 +940,65 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             reply_markup=kb_back("adm_panel"), parse_mode="Markdown"
         )
 
+
+   elif data == "referral":
+        from referral import get_ref_code, REFERRAL_BONUS_PERCENT, REFERRAL_REG_BONUS
+        db   = load_db(); u = get_user(db, uid)
+        code = get_ref_code(uid)
+        bot_name = (await ctx.bot.get_me()).username
+        ref_link = f"https://t.me/{bot_name}?start=ref_{code}"
+        txt = (
+            f"👥 *РЕФЕРАЛЫ*\n\n"
+            f"🎁 За каждого нового друга: *+{fmt(REFERRAL_REG_BONUS)} USDT*\n"
+            f"💸 С каждого пополнения друга: *{REFERRAL_BONUS_PERCENT}%*\n\n"
+            f"🔗 Ваша ссылка:\n`{ref_link}`\n\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Приглашено: *{u.get('referral_count', 0)}* чел.\n"
+            f"💰 Заработано: *{fmt(u.get('referral_earned', 0.0))} USDT*"
+        )
+        await q.edit_message_text(txt, reply_markup=kb_back("main"), parse_mode="Markdown")
+
+    # Реферальный бонус при ручной проверке оплаты
+    elif data.startswith("check_pay_"):
+        invoice_key = data[10:]
+        invoices    = db.get("invoices", {})
+        inv         = invoices.get(invoice_key)
+        if not inv:
+            await q.answer("❌ Счёт не найден.", show_alert=True); return
+        if inv["status"] == "paid":
+            await q.answer(f"✅ Уже зачислено!", show_alert=True); return
+        cb_inv = await cryptobot_get_invoice(inv["cb_id"])
+        if cb_inv and cb_inv.get("status") == "paid":
+            amount = float(cb_inv.get("amount", inv["amount"]))
+            db["invoices"][invoice_key]["status"] = "paid"
+            save_db(db)
+            db2 = load_db(); u2 = get_user(db2, uid)
+            upd(db2, uid, {
+                "balance":         round(u2["balance"] + amount, 8),
+                "total_deposited": round(u2["total_deposited"] + amount, 8),
+            })
+            from referral import pay_ref_bonus
+            await pay_ref_bonus(ctx.application, uid, amount)
+            db3 = load_db(); u3 = get_user(db3, uid)
+            await q.edit_message_text(
+                f"✅ *Оплата подтверждена!*\n\n"
+                f"💵 Зачислено: *+{fmt(amount)} USDT*\n"
+                f"💰 Баланс: *{fmt(u3['balance'])} USDT*",
+                reply_markup=kb_main(), parse_mode="Markdown"
+            )
+        else:
+            await q.answer("⏳ Оплата ещё не поступила.", show_alert=True)
+
+
+
+
+    
+
     elif data == "adm_broadcast":
         if uid not in ADMIN_IDS: return
         ctx.user_data["adm_broadcast"] = True
         await q.edit_message_text(
             "📢 *РАССЫЛКА*\n\nВведите текст сообщения для всех пользователей:",
             reply_markup=kb_back("adm_panel"), parse_mode="Markdown"
+
         )
